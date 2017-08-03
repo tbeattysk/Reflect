@@ -1,0 +1,91 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/app-route/app-location.html">
+<link rel="import" href="eslide/emoji-slide.html">
+<link rel="import" href="eslide/emoji-review.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="reflect-view">
+  <template>
+    <style include="shared-styles iron-flex iron-flex-alignment">
+      :host {
+        display: block;
+        padding: 10px;
+      }
+      emoji-review {
+        margin-right: 5px;
+      }
+
+    </style>
+    <app-location route="{{route}}"></app-location>
+    <div class="card">
+      <h1>Homework Assignment 1.1</h1>
+      <p>Descriptions</p>
+      <h3>Q1 - Adding and subtracting decimals</h3>
+      <emoji-slide value={{scale1}}></emoji-slide>
+      <h3>Q2 - Multiplying whole numbers</h3>
+      <emoji-slide  value={{scale2}}></emoji-slide>
+      <h3>Q3 - Use visual fraction models to find the products of fractions</h3>
+      <emoji-slide  value={{scale3}}></emoji-slide>
+      <h3>Q4 - Find greatest common factor and least common multiple of two numbers</h3>
+      <emoji-slide></emoji-slide>
+      <p><paper-button class="indigo" on-click="_submit">Finish</paper-button></p>
+    </div>
+    <div class="card">
+      <div class="layout horizontal center">
+        <emoji-review scale={{scale1}}></emoji-review>
+        <h3>Q1 - Adding and subtracting decimals</h3>
+      </div>
+      <div class="layout horizontal center">
+        <emoji-review scale={{scale2}}></emoji-review>
+        <h3>Q2 - Multiplying whole numbers</h3>
+      </div>
+      <div class="layout horizontal center">
+        <emoji-review scale={{scale3}}></emoji-review>
+        <h3>Q3 - Use visual fraction models to find the products of fractions</h3>
+      </div>
+    </div>
+
+  </template>
+
+  <script>
+    class ReflectView extends Polymer.Element {
+      static get is() { return 'reflect-view'; }
+
+      _submit(){
+        console.log("okay!");
+        this.set('route.path','class');
+      }
+    }
+
+    window.customElements.define(ReflectView.is, ReflectView);
+  </script>
+</dom-module>
+
+
+    <!-- <div class="card">
+      Another view with each target as a different card
+
+      <h1>Homework Assignment 1.1</h1>
+      <p>Descriptions</p>
+    </div>
+      <div class=" card layout horizontal">
+        <h3 class="flex">Q1 - Adding and subtracting decimals</h3>
+        <emoji-slide class="horizontal end-justified layout"></emoji-slide>
+      </div>
+      <div class="card layout horizontal">
+        <h3 class="flex">Q2 - Multiplying whole numbers</h3>
+        <emoji-slide class="horizontal end-justified layout"></emoji-slide>
+      </div>
+-->

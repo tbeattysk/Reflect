@@ -1,0 +1,60 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-progress/paper-progress.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="join-view">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+
+        padding: 10px;
+      }
+      paper-progress {
+        display: block;
+        width: 100%;
+        margin: 20px 0;
+      }
+      paper-progress.blue {
+        --paper-progress-active-color: var(--paper-light-blue-500);
+        --paper-progress-secondary-color: var(--paper-light-blue-100);
+      }
+    </style>
+
+    <div class="card" id="form">
+      <h1>Join Course</h1>
+      <paper-input always-float-label label="Class Code"></paper-input>
+      <paper-button class="indigo" on-click="_join">Join</paper-button>
+      <paper-progress id="loading" disabled indeterminate class="blue"></paper-progress>
+    </div>
+   
+  </template>
+
+  <script>
+    class JoinView extends Polymer.Element {
+      static get is() { return 'join-view'; }
+
+      _join(){
+        this.$.loading.disabled=false;
+        var self=this;
+        setTimeout(function() {
+          self.$.loading.disabled=true; //turn off progress bar
+        }, 2500);
+      }
+    }
+
+    window.customElements.define(JoinView.is, JoinView);
+  </script>
+</dom-module>
