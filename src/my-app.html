@@ -9,18 +9,23 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 -->
 
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/app-route/app-location.html">
+<link rel="import" href="../bower_components/app-route/app-route.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-app.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-query.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-document.html">
+
 <link rel="import" href="../bower_components/app-layout/app-drawer/app-drawer.html">
 <link rel="import" href="../bower_components/app-layout/app-drawer-layout/app-drawer-layout.html">
 <link rel="import" href="../bower_components/app-layout/app-header/app-header.html">
 <link rel="import" href="../bower_components/app-layout/app-header-layout/app-header-layout.html">
 <link rel="import" href="../bower_components/app-layout/app-scroll-effects/app-scroll-effects.html">
 <link rel="import" href="../bower_components/app-layout/app-toolbar/app-toolbar.html">
-<link rel="import" href="../bower_components/app-route/app-location.html">
-<link rel="import" href="../bower_components/app-route/app-route.html">
 <link rel="import" href="../bower_components/iron-pages/iron-pages.html">
 <link rel="import" href="../bower_components/iron-selector/iron-selector.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="my-icons.html">
+<link rel="import" href="my-app-login.html">
 
 <link rel="lazy-import" href="welcome-view.html">
 <link rel="lazy-import" href="class-view.html">
@@ -72,23 +77,40 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         margin-left: 5px;
       }
     </style>
-
     <app-location route="{{route}}"></app-location>
-    <app-route
-        route="{{route}}"
-        pattern="[[rootPattern]]:page"
-        data="{{routeData}}"
-        tail="{{subroute}}"></app-route>
+    <app-route route="{{route}}" pattern="[[rootPattern]]:page" data="{{routeData}}" tail="{{subroute}}"></app-route>
+    <app-route route="{{subroute}}" pattern="/:courseid" data="{{routeCourseData}}"></app-route>
+ 
+    <firebase-app id="firebase" 
+      name:"studentReflect"
+      auth-domain="reflect-teacher.firebaseapp.com" 
+      database-url="https://reflect-teacher.firebaseio.com/"
+      api-key="AIzaSyBfWUy6UaCfw8z1CcAxquAp2r8A6DqN0CQ">
+    </firebase-app>
+    <firebase-auth user="{{user}}"></firebase-auth>
+    <firebase-document id="userPresets" path="" data={{presets}}>      
+    <firebase-document id="courseData" 
+      path="/courses/{{routeCourseData.courseid}}/title" 
+      data={{courseTitleRaw}}>
+    </firebase-document>
+    <firebase-query id="courses"
+      path="/students/[[user.uid]]/courses"
+      order-by-child="title"
+      data={{userCourses}}>
+    </firebase-query>
 
+   
     <app-drawer-layout fullbleed>
       <!-- Drawer content -->
       <app-drawer id="drawer" slot="drawer">
         <app-toolbar>Reflect <p>alpha</p></app-toolbar>
         <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
           <a name="welcome" href="welcome">Welcome</a>
-       
-          <a name="math" href="class/math">Math</a>
-          <a name="science" href="class/science">Science</a>
+          <template is="dom-repeat" items="[[userCourses]]" as="course">
+            <div>
+            <a name="[[course.courseId]]" class="title" href="class/[[course.courseId]]">[[course.title]]</a>
+            </div>
+          </template>
           <a name="join" href="join" style="color:#1255a4">Join Course</a>          
         </iron-selector>
       </app-drawer>
@@ -99,7 +121,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <app-header slot="header" condenses reveals effects="waterfall">
           <app-toolbar>
             <paper-icon-button icon="my-icons:menu" drawer-toggle></paper-icon-button>
-            <div main-title>Math 6</div>
+            <div main-title>{{courseTitle}}</div>
+            <span class="flex"></span>
+            <my-app-login></my-app-login>
           </app-toolbar>
         </app-header>
 
@@ -109,8 +133,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             fallback-selection="view404"
             role="main">
           <welcome-view name="welcome"></welcome-view>
-          <class-view name="class"></class-view>
-          <reflect-view name="reflect"></reflect-view>
+          <class-view route={{subroute}} name="class"></class-view>
+          <reflect-view route={{subroute}} name="reflect"></reflect-view>
           <join-view name="join"></join-view>
           <my-view404 name="error"></my-view404>
         </iron-pages>
@@ -130,6 +154,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             reflectToAttribute: true,
             observer: '_pageChanged',
           },
+          courseTitle: {
+            type: String,
+            value: ''
+          },
           rootPattern: String,
           routeData: Object,
           subroute: String,
@@ -139,6 +167,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       static get observers() {
         return [
           '_routePageChanged(routeData.page)',
+          '_userDataChanged(user)',
+          '_courseTitleFilter(courseTitleRaw)',
         ];
       }
 
@@ -176,7 +206,25 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             this._showPage404.bind(this),
             true);
       }
-
+      _userDataChanged(user) {
+        if (user) {  //only update state if user is logged-in
+          this.$.userPresets.path = "/students/" + user.uid + "/presets";
+          return this.$.userPresets.initializeStoredValue()
+            .then(snap => {
+              if (!this.presets.init) {
+                return this.$.userPresets.ref.set({ //initialize user profile
+                  init: true,
+                  name: user.displayName
+                })
+              }
+            })
+        }
+      }
+      _courseTitleFilter(courseTitleRaw){
+        if(typeof this.courseTitleRaw == "string"){
+          this.courseTitle=this.courseTitleRaw;
+        }
+      }
       _showPage404() {
         this.page = 'view404';
       }

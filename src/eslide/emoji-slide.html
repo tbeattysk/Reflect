@@ -45,7 +45,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <script>
     class EmojiSlide extends Polymer.Element {
       static get is() { return 'emoji-slide'; }
+      ready(){
+        super.ready();
+        this.loadImages(this.myImages);
+        // the images we are going to display
 
+      }
       static get properties() {
         return {
           //This 
@@ -59,6 +64,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           images:{
             type: String,
             value: ['sad','confused','neutral','smiling','grinning'],
+          },
+          myImages:{
+            type: Array,
+            value: [
+              'src/eslide/sad.svg',
+              'src/eslide/confused.svg',
+              'src/eslide/neutral.svg',
+              'src/eslide/smiling.svg',
+              'src/eslide/grinning.svg'
+            ]
           }
         };
       }
@@ -66,6 +81,35 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         this.value = this.$.scale.value;
         this.$.selector.selectIndex(this.value);
       }
+      loadImages (images) {
+          // each image will be loaded by this function.
+          // it returns a Promise that will resolve once
+          // the image has finished loading
+          let loader = function (src) {
+            return new Promise(function (resolve, reject) {
+              let img = new Image();
+              img.onload = function () {
+                // resolve the promise with our url so it is
+                // returned in the result of Promise.all
+                resolve(src);
+              };
+              img.onerror = function (err) {
+                reject(err);
+              };
+              img.src = src;
+            });
+          }
+
+          // create an image loader for each url
+          let loaders = [];
+          images.forEach(function (image) {
+            loaders.push(loader(image));
+          });
+
+          // Promise.all will return a promise that will resolve once all of of our
+          // image loader promises resolve
+          return Promise.all(loaders);
+        }
     }
 
     window.customElements.define(EmojiSlide.is, EmojiSlide);

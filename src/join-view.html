@@ -9,6 +9,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 -->
 
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-document.html">  
+<link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-progress/paper-progress.html">
@@ -33,10 +36,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
     </style>
 
+    <firebase-auth user={{user}}></firebase-auth>
+
+    <firebase-document id="studentPath" 
+      path="/students/[[user.uid]]/courses" 
+      data={{studentPath}}
+      limit-to-first="1">
+    </firebase-document>
+
     <div class="card" id="form">
       <h1>Join Course</h1>
-      <paper-input always-float-label label="Class Code"></paper-input>
-      <paper-button class="indigo" on-click="_join">Join</paper-button>
+      <paper-input id="codeInput" always-float-label label="Class Code"></paper-input>
+      <paper-button id="joinButton" class="indigo" on-click="_join">Join</paper-button>
       <paper-progress id="loading" disabled indeterminate class="blue"></paper-progress>
     </div>
    
@@ -46,12 +57,54 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     class JoinView extends Polymer.Element {
       static get is() { return 'join-view'; }
 
+      static get observers() {
+        return [
+          '_newRefKey(studentPath.courseConfirm)'
+        ];
+      }
+      _newRefKey(courseConfirm){
+        if(this.joinAttempt){
+          let p1 = new Promise((resolve, reject)=>{
+            if(courseConfirm == false){
+              console.log("Course doesn't exist");
+              let p2 = this.$.studentPath.ref.remove();
+              this.$.studentPath.path = `/students/${this.user.uid}/courses`;
+              let p3 = this.$.studentPath.initializeStoredValue();
+              resolve(Promise.all([p2,p3]))
+            }
+            else if(courseConfirm == true){
+              console.log("The course exists you lucky goose!");
+              this.$.studentPath.path = `/students/${this.user.uid}/courses`;
+              resolve(this.$.studentPath.initializeStoredValue())
+            }else{
+              reject()
+            }
+          }).then((e)=>{
+            this.joinAttempt=false;
+            this.$.loading.disabled = true; 
+            this.$.codeInput.value = "";
+            this.$.joinButton.disabled = false; 
+            //this.set('route.path',`/targets/${this.teacherPath.courseId}`)
+          }).catch(reason=>{
+            console.log(reason);
+          })
+        }
+      }
       _join(){
-        this.$.loading.disabled=false;
-        var self=this;
-        setTimeout(function() {
-          self.$.loading.disabled=true; //turn off progress bar
-        }, 2500);
+        if(this.$.codeInput.value){
+          this.$.loading.disabled=false;
+          this.$.joinButton.disabled = true; 
+          this.$.studentPath.ref.push({ 
+            update: true, //use firebase cloud fuctions to create class in root dir
+            added: { ".sv": "timestamp" }, //timestamp needed?
+            codeRequest: this.$.codeInput.value, 
+          }).then(joinCourse =>{
+            this.joinAttempt = true;
+            this.studentCourseRef = joinCourse.key;
+            this.$.studentPath.path = `/students/${this.user.uid}/courses/${joinCourse.key}`;
+            this.$.studentPath.initializeStoredValue();
+          })
+        }
       }
     }
 

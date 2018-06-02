@@ -9,9 +9,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 -->
 
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/app-route/app-route.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-document.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-query.html">
+
 <link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
-<link rel="import" href="../bower_components/app-route/app-location.html">
 <link rel="import" href="eslide/emoji-slide.html">
 <link rel="import" href="eslide/emoji-review.html">
 <link rel="import" href="shared-styles.html">
@@ -28,47 +32,193 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
     </style>
-    <app-location route="{{route}}"></app-location>
-    <div class="card">
-      <h1>Homework Assignment 1.1</h1>
-      <p>Descriptions</p>
-      <h3>Q1 - Adding and subtracting decimals</h3>
-      <emoji-slide value={{scale1}}></emoji-slide>
-      <h3>Q2 - Multiplying whole numbers</h3>
-      <emoji-slide  value={{scale2}}></emoji-slide>
-      <h3>Q3 - Use visual fraction models to find the products of fractions</h3>
-      <emoji-slide  value={{scale3}}></emoji-slide>
-      <h3>Q4 - Find greatest common factor and least common multiple of two numbers</h3>
-      <emoji-slide></emoji-slide>
-      <p><paper-button class="indigo" on-click="_submit">Finish</paper-button></p>
-    </div>
-    <div class="card">
-      <div class="layout horizontal center">
-        <emoji-review scale={{scale1}}></emoji-review>
-        <h3>Q1 - Adding and subtracting decimals</h3>
-      </div>
-      <div class="layout horizontal center">
-        <emoji-review scale={{scale2}}></emoji-review>
-        <h3>Q2 - Multiplying whole numbers</h3>
-      </div>
-      <div class="layout horizontal center">
-        <emoji-review scale={{scale3}}></emoji-review>
-        <h3>Q3 - Use visual fraction models to find the products of fractions</h3>
-      </div>
-    </div>
+    <app-route route="{{route}}" 
+      pattern="/:courseid/:reflectionid"
+      data={{routeData}}
+      tail="{{subroute}}"></app-route>
+      <firebase-auth user={{user}}></firebase-auth>
 
-  </template>
-
+      <firebase-document id="studentReflection"
+        path="/courses/[[routeData.courseid]]/students/[[user.uid]]/reflections/[[routeData.reflectionid]]"
+        data={{studentReflection}}>
+      </firebase-document>
+      <firebase-document id="reflecton" 
+        path="/courses/[[routeData.courseid]]/reflections/[[routeData.reflectionid]]" 
+        data={{reflection}}>
+      </firebase-document>
+      <firebase-document id="targets" 
+        path="/courses/[[routeData.courseid]]/targets" 
+        data={{courseTargets}}>
+      </firebase-document>
+    <div hidden$="[[!dataReady]]">
+      <div class="complete" hidden$="[[incomplete]]">
+      <div class="card" hidden$="[[submitted]]">
+        <h1>[[reflection.title]]</h1>
+        <template is="dom-repeat" items={{targetData}} as="target">
+          <h3>[[target.ref]] - [[target.title]]</h3>
+          <emoji-slide value={{target.val}}></emoji-slide>  
+        </template>
+        <p><paper-button class="indigo" on-click="_submit">Submit</paper-button></p>
+        <div hidden$="[[storeUpdated]]">Saving</div>
+      </div>
+      <div class="card" hidden$="[[!submitted]]">
+          <h1>[[reflection.title]]</h1>
+        <template is="dom-repeat" items={{targetData}} as="target">            
+          <div class="layout horizontal center">
+              <emoji-review scale={{target.val}}></emoji-review>
+            <h3>[[target.ref]] - [[target.title]]</h3>
+          </div>
+        </template>
+        <p><paper-button class="indigo" on-click="_unsubmit">Unsubmit</paper-button></p>
+        <div hidden$="[[storeUpdated]]">Saving</div>
+      </div>
+      </div>
+      <div class="card" hidden$="[[!incomplete]]">
+          <h1>[[reflection.title]]</h1>
+          <template is="dom-repeat" items={{targetData}} as="target">            
+              <div class="layout horizontal center">
+                <h3>[[target.ref]] - [[target.title]]</h3>
+              </div>
+            </template>
+      </div>
+    </template>
+  </div>
   <script>
     class ReflectView extends Polymer.Element {
       static get is() { return 'reflect-view'; }
+      static get properties() {
+        return {
+          dataReady:{
+            type:Boolean,
+            value: false
+          },
+          submitted:{
+            type:Boolean,
+            value:false
+          },
+          incomplete:{
+            type:Boolean,
+            value:false
+          },
+          reflectionTargets:{
+            type: Array,
+            value:[]
+          },
+          studentReflection:{
+            type: Object,
+          },
+          reflection:{
+            type: Object,
+            value:{}
+          },
+          courseTargets:{
+            type:Object,
+            value:{}
+          },
+          targetData:{
+            type: Array,
+            value: []
+          },
+          storeUpdated:{
+            type: Boolean,
+            observer: "_storeUpdate"
+          }
+        };
+      }
+      static get observers() {
+        return [
+          '_updateTargets(courseTargets)',
+          '_updateTargets(courseTargets.opened)',
+          '_changeReflection(routeData.reflectionid)',
+          '_setStudentData(studentReflection)',
+          '_storeUpdate(studentReflection.storeUpdated)'
+        ];
+      }
+      // ready(){
+      //   super.ready();
+      //   console.log("re")
+      // }
+      _setStudentData(e){
+        if(e.submitted=="true"){
+          this.submitted = true
+        }else{this.submitted = false}
+        this._updateTargets();
+        console.log("aha")
+      }
 
+      _storeUpdate(e){
+        console.log(e)
+        if(e==false || e=="false"){
+          console.log("Make False")
+          this.storeUpdated = false;
+        }else{
+          this.storeUpdated = true;
+          console.log("Make True")
+          if(this.studentReflection.submitted=="true"){
+          this.submitted = true
+          }else{this.submitted = false}
+        }
+      }
+      
       _submit(){
-        console.log("okay!");
-        this.set('route.path','class');
+        console.log("Make False");
+        this.storeUpdated = false;
+        let reflect = {};
+        for(var i=0;i<Object.keys(this.targetData).length;i++){
+          reflect[this.targetData[i].$key] = this.targetData[i].val
+        }
+        this.$.studentReflection.ref.set({
+          submitted: "true",
+          reflection:reflect,
+          storeUpdated: "false"
+        })
+      }
+      _unsubmit(){
+        console.log("Make False");
+        this.storeUpdated = false;
+        this.$.studentReflection.ref.set({
+          submitted: "false",
+          reflection:this.studentReflection.reflection,
+          storeUpdated: "false"
+        })
+      }
+      
+      _updateTargets(){
+        if(Object.keys(this.reflection).length>0 && Object.keys(this.courseTargets).length>0){
+          this.targetData = [];
+          if(!this.reflection.opened && !this.submitted){
+            this.incomplete = true;
+          }else{this.incomplete = false;}
+          for(var key in this.reflection.targets){
+            this.push('targetData',{
+              $key: key,
+              title: this.courseTargets[this.reflection.targets[key].target].title,
+              ref: this.reflection.targets[key].ref,
+              val: this._getVal(key)
+            })
+          }
+          this.dataReady = true;
+        }
+      }
+      _getVal(key){
+        if(!this.reflection.opened && this.submitted){
+          return null
+        }
+        else if(Object.keys(this.studentReflection).length==0){
+          return 2
+        }else{
+          return this.studentReflection.reflection[key];
+        }
+      }
+      _changeReflection(){
+        this.dataReady = false;
+        this.targetData = [];
+          //getting duplicate reflection taegets for some reason
+          // var uniq = new Set(this.reflectionTargets.map(e => JSON.stringify(e)));
+          // this.reflectionTargets = Array.from(uniq).map(e => JSON.parse(e));
+        this._updateTargets();
       }
     }
-
     window.customElements.define(ReflectView.is, ReflectView);
   </script>
 </dom-module>
